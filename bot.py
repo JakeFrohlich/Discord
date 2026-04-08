@@ -6,6 +6,7 @@ import asyncio
 from dotenv import load_dotenv
 from music import MusicCog
 from invites import InviteTrackerCog
+from moderation import ModerationCog
 
 load_dotenv()
 
@@ -73,6 +74,7 @@ async def main():
     async with bot:
         await bot.add_cog(MusicCog(bot))
         await bot.add_cog(InviteTrackerCog(bot))
+        await bot.add_cog(ModerationCog(bot))
         await bot.start(os.getenv("DISCORD_TOKEN"))
 
 
