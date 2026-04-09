@@ -4,13 +4,14 @@ import asyncio
 import yt_dlp
 
 YTDL_OPTIONS = {
-    "format": "bestaudio[ext=webm]/bestaudio[ext=m4a]/bestaudio/best",
+    "format": "bestaudio/best",
     "noplaylist": True,
     "quiet": True,
     "no_warnings": True,
     "default_search": "ytsearch",
     "source_address": "0.0.0.0",
     "cookiefile": "cookies.txt",
+    "extractor_args": {"youtube": {"player_client": ["tv"]}},
 }
 
 FFMPEG_OPTIONS = {
