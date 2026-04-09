@@ -166,12 +166,24 @@ class MusicCog(commands.Cog):
     @commands.cooldown(1, 10, commands.BucketType.user)
     async def leave(self, ctx: commands.Context):
         """Leave the voice channel."""
-        if ctx.voice_client:
-            self._get_queue(ctx.guild.id).clear()
-            await ctx.voice_client.disconnect()
-            await ctx.send("Disconnected.")
-        else:
-            await ctx.send("I'm not in a voice channel.")
+        if not ctx.voice_client:
+            return await ctx.send("I'm not in a voice channel.")
+
+        is_admin = ctx.author.guild_permissions.administrator
+        has_owner_role = discord.utils.get(ctx.author.roles, name="Owner") is not None
+        in_same_vc = (
+            ctx.author.voice
+            and ctx.author.voice.channel == ctx.voice_client.channel
+        )
+
+        if not (in_same_vc or is_admin or has_owner_role):
+            return await ctx.send(
+                "You must be in the same voice channel to use this.", delete_after=5
+            )
+
+        self._get_queue(ctx.guild.id).clear()
+        await ctx.voice_client.disconnect()
+        await ctx.send("Disconnected.")
 
     @join.error
     @leave.error
