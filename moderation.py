@@ -42,3 +42,20 @@ class ModerationCog(commands.Cog):
                 await warning.delete(delay=5)
                 print(f"Deleted message from {message.author} in {message.guild.name}: slur detected")
                 return
+
+    @commands.command(name="purge")
+    @commands.has_permissions(administrator=True)
+    async def purge(self, ctx: commands.Context, amount: int):
+        """Delete messages. Usage: ?purge <number>"""
+        if amount < 1 or amount > 500:
+            return await ctx.send("Please specify a number between 1 and 500.", delete_after=5)
+
+        deleted = await ctx.channel.purge(limit=amount + 1)  # +1 to include the command itself
+        await ctx.send(f"Deleted **{len(deleted) - 1}** messages.", delete_after=5)
+
+    @purge.error
+    async def purge_error(self, ctx, error):
+        if isinstance(error, commands.MissingPermissions):
+            await ctx.send("You need Administrator permissions to use this.", delete_after=5)
+        elif isinstance(error, commands.MissingRequiredArgument):
+            await ctx.send("Usage: `?purge <number>`", delete_after=5)

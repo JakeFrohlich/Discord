@@ -24,6 +24,8 @@ bot = commands.Bot(command_prefix="?", intents=intents)
 @bot.check
 async def restrict_to_allowed_channels(ctx):
     """Only allow commands in approved channels."""
+    if ctx.command and ctx.command.name == "purge":
+        return True
     if ctx.channel.name in ALLOWED_CHANNELS:
         return True
     await ctx.send("Commands can only be used in #bot-commands.", delete_after=5)
@@ -56,6 +58,11 @@ async def commands_list(ctx):
             "**?join** — Join your voice channel\n"
             "**?leave** — Leave the voice channel"
         ),
+        inline=False,
+    )
+    embed.add_field(
+        name="Moderation (Admin only)",
+        value="**?purge <number>** — Delete messages (works in any channel)",
         inline=False,
     )
     embed.add_field(
