@@ -81,10 +81,10 @@ class ModerationCog(commands.Cog):
                 if msg.author == target:
                     await msg.delete()
                     count += 1
-            await ctx.send(f"Deleted **{count}** messages from {target.mention}.", delete_after=5)
+            await ctx.author.send(f"Deleted **{count}** messages from {target.name} in #{ctx.channel.name}.")
         else:
             deleted = await ctx.channel.purge(limit=amount)
-            await ctx.send(f"Deleted **{len(deleted)}** messages.", delete_after=5)
+            await ctx.author.send(f"Deleted **{len(deleted)}** messages in #{ctx.channel.name}.")
 
     @purge.error
     async def purge_error(self, ctx, error):
