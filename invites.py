@@ -125,7 +125,7 @@ class InviteTrackerCog(commands.Cog):
                 f"The launch is coming, 5 · 21 · 26 — you're already ahead of everyone else. "
                 f"Sign up now, lock in your spot, and you'll automatically be entered for a chance "
                 f"to walk away with a free zip up from us.\n\n"
-                f"👉 [obliveyon.com](<https://obliveyon.com>)\n\n"
+                f"👉 [obliveyon.com](<https://obliveyon.com>) ⚔️\n\n"
                 f"Welcome to the chosen ⚔️"
             )
 
