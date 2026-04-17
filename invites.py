@@ -82,7 +82,7 @@ class InviteTrackerCog(commands.Cog):
         self.invite_cache[guild_id] = {inv.code: inv.uses for inv in current_invites}
 
         # Welcome message — goes to #ticket-logs for testing, move to welcome channel later
-        welcome_channel = discord.utils.get(guild.text_channels, name="ticket-logs")
+        welcome_channel = discord.utils.get(guild.text_channels, name="welcome-player")
         if welcome_channel:
             border = "─" * 35
             async with self._welcome_lock:
