@@ -84,7 +84,7 @@ class InviteTrackerCog(commands.Cog):
         # Welcome message — goes to #ticket-logs for testing, move to welcome channel later
         welcome_channel = discord.utils.get(guild.text_channels, name="ticket-logs")
         if welcome_channel:
-            border = "─" * 40
+            border = "─" * 35
             async with self._welcome_lock:
                 import datetime
                 now = discord.utils.utcnow()
