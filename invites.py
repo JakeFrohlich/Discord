@@ -79,6 +79,16 @@ class InviteTrackerCog(commands.Cog):
         # Update cache
         self.invite_cache[guild_id] = {inv.code: inv.uses for inv in current_invites}
 
+        # Welcome message — goes to #ticket-logs for testing, move to welcome channel later
+        welcome_channel = discord.utils.get(guild.text_channels, name="ticket-logs")
+        if welcome_channel:
+            await welcome_channel.send(
+                f"Welcome {member.mention} (`{member}` / ID: `{member.id}`) — you've found your way here for a reason.\n"
+                f"You are amongst the chosen now. Be the light in the Darkness. Clothing drop coming 5/21/26.\n"
+                f"Be ready, sign up at [obliveyon.com](<https://obliveyon.com>) to secure your place — "
+                f"and enter for a chance to win a free hoodie. 🖤⚔️"
+            )
+
         if inviter is None or inviter.bot:
             return
 
