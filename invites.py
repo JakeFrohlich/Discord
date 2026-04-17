@@ -115,6 +115,20 @@ class InviteTrackerCog(commands.Cog):
                 )
                 self._had_previous_join[guild.id] = True
 
+        # DM welcome message — currently sent to #ticket-logs for testing
+        dm_test_channel = discord.utils.get(guild.text_channels, name="ticket-logs")
+        if dm_test_channel:
+            await dm_test_channel.send(
+                f"**[DM TEST — recipient: {member.mention}]**\n\n"
+                f"You made it. Thank you so much for joining.\n\n"
+                f"Not everyone finds this place — but you did. That already says something about you.\n\n"
+                f"The launch is coming, 5 · 21 · 26 — you're already ahead of everyone else. "
+                f"Sign up now, lock in your spot, and you'll automatically be entered for a chance "
+                f"to walk away with a free zip up from us.\n\n"
+                f"👉 [obliveyon.com](<https://obliveyon.com>)\n\n"
+                f"Welcome to the chosen"
+            )
+
         if inviter is None or inviter.bot:
             return
 
