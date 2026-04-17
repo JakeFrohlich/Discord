@@ -74,6 +74,17 @@ class InviteTrackerCog(commands.Cog):
         old_cache = self.invite_cache.get(guild_id, {})
         inviter = None
 
+        # Check if vanity URL was used
+        vanity_used = False
+        try:
+            vanity = await guild.vanity_invite()
+            old_vanity_uses = self.invite_cache.get(guild_id, {}).get("vanity", 0)
+            if vanity and vanity.uses > old_vanity_uses:
+                vanity_used = True
+                old_cache["vanity"] = vanity.uses
+        except (discord.Forbidden, discord.HTTPException):
+            pass
+
         for invite in current_invites:
             old_uses = old_cache.get(invite.code, 0)
             if invite.uses > old_uses and invite.inviter:
@@ -82,6 +93,13 @@ class InviteTrackerCog(commands.Cog):
 
         # Update cache
         self.invite_cache[guild_id] = {inv.code: inv.uses for inv in current_invites}
+        # Also cache vanity uses
+        try:
+            vanity = await guild.vanity_invite()
+            if vanity:
+                self.invite_cache[guild_id]["vanity"] = vanity.uses
+        except (discord.Forbidden, discord.HTTPException):
+            pass
 
         # Assign The Wonderer role on join
         wonderer_role = discord.utils.get(guild.roles, name="The Wanderer")
@@ -141,7 +159,12 @@ class InviteTrackerCog(commands.Cog):
                 f">>> {dm_message}"
             )
 
-        if inviter is None or inviter.bot:
+        if inviter is None:
+            if vanity_used:
+                print(f"{member.name} joined via vanity URL (discord.gg/obliveyon) — not credited to any inviter")
+            return
+
+        if inviter.bot:
             return
 
         # Update invite count
