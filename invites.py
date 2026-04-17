@@ -2,6 +2,7 @@ import discord
 from discord.ext import commands
 import json
 import os
+import asyncio
 
 INVITE_DATA_FILE = "invite_data.json"
 ROLE_NAME = "Pink Nametag"
@@ -17,6 +18,7 @@ class InviteTrackerCog(commands.Cog):
         self.invite_cache: dict[int, dict[str, int]] = {}
         # guild_id -> {inviter_id: count}
         self.invite_counts: dict[str, dict[str, int]] = {}
+        self._welcome_lock = asyncio.Lock()
         self._load_data()
 
     def _load_data(self):
@@ -83,15 +85,20 @@ class InviteTrackerCog(commands.Cog):
         welcome_channel = discord.utils.get(guild.text_channels, name="ticket-logs")
         if welcome_channel:
             border = "─" * 40
-            await welcome_channel.send(
-                f"{border}\n"
-                f"Welcome {member.mention} — you've found your way here for a reason.\n"
-                f"You are amongst the chosen now. Be the light in the Darkness. Clothing drop coming 5/21/26.\n"
-                f"Be ready, sign up at [obliveyon.com](<https://obliveyon.com>) to secure your place — "
-                f"and enter for a chance to win a free hoodie. 🖤⚔️\n"
-                f"{border}"
-            )
-            await welcome_channel.send("https://cdn.discordapp.com/attachments/1049742034526806046/1490478452166627601/ezgif-8ea71cc67d438330.gif")
+            async with self._welcome_lock:
+                top = await welcome_channel.send(
+                    f"{border}\n"
+                    f"Welcome {member.mention} — you've found your way here for a reason.\n"
+                    f"You are amongst the chosen now. Be the light in the Darkness. Clothing drop coming 5/21/26.\n"
+                    f"Be ready, sign up at [obliveyon.com](<https://obliveyon.com>) to secure your place — "
+                    f"and enter for a chance to win a free hoodie. 🖤⚔️"
+                )
+                await welcome_channel.send(
+                    "https://cdn.discordapp.com/attachments/1049742034526806046/1490478452166627601/ezgif-8ea71cc67d438330.gif",
+                    reference=top,
+                    mention_author=False,
+                )
+                await welcome_channel.send(border, reference=top, mention_author=False)
 
         if inviter is None or inviter.bot:
             return
