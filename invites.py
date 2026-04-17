@@ -83,7 +83,7 @@ class InviteTrackerCog(commands.Cog):
         welcome_channel = discord.utils.get(guild.text_channels, name="ticket-logs")
         if welcome_channel:
             await welcome_channel.send(
-                f"Welcome {member.mention} (`{member}` / ID: `{member.id}`) — you've found your way here for a reason.\n"
+                f"Welcome {member.mention} — you've found your way here for a reason.\n"
                 f"You are amongst the chosen now. Be the light in the Darkness. Clothing drop coming 5/21/26.\n"
                 f"Be ready, sign up at [obliveyon.com](<https://obliveyon.com>) to secure your place — "
                 f"and enter for a chance to win a free hoodie. 🖤⚔️"
