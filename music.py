@@ -1,6 +1,7 @@
 import discord
 from discord.ext import commands
 import asyncio
+import random
 import yt_dlp
 
 YTDL_OPTIONS = {
@@ -25,8 +26,10 @@ class MusicCog(commands.Cog):
 
     def __init__(self, bot: commands.Bot):
         self.bot = bot
-        # guild_id -> list of (title, url)
-        self.queues: dict[int, list[tuple[str, str]]] = {}
+        # guild_id -> list of (title, url, requester_name)
+        self.queues: dict[int, list[tuple[str, str, str]]] = {}
+        # guild_id -> (title, url, requester_name) | None
+        self.current: dict[int, tuple[str, str, str] | None] = {}
 
     @commands.Cog.listener()
     async def on_voice_state_update(self, member, before, after):
@@ -34,7 +37,6 @@ class MusicCog(commands.Cog):
         if member.bot:
             return
 
-        # Only care about someone leaving a channel
         if before.channel is None:
             return
 
@@ -42,10 +44,10 @@ class MusicCog(commands.Cog):
         if not guild.voice_client or guild.voice_client.channel != before.channel:
             return
 
-        # Count non-bot members in the channel
         real_members = [m for m in before.channel.members if not m.bot]
         if len(real_members) == 0:
             self._get_queue(guild.id).clear()
+            self.current[guild.id] = None
             if guild.voice_client.is_playing():
                 guild.voice_client.stop()
             await guild.voice_client.disconnect()
@@ -57,14 +59,13 @@ class MusicCog(commands.Cog):
 
     async def _search(self, query: str) -> tuple[str, str] | None:
         """Search YouTube and return (title, stream_url)."""
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
         ytdl = yt_dlp.YoutubeDL(YTDL_OPTIONS)
 
         def extract():
             info = ytdl.extract_info(query, download=False)
             if "entries" in info:
                 info = info["entries"][0]
-            # Try to get a direct URL, fall back to formats list
             url = info.get("url")
             if not url:
                 formats = info.get("formats", [])
@@ -84,9 +85,11 @@ class MusicCog(commands.Cog):
         """Play the next song in the queue."""
         queue = self._get_queue(guild.id)
         if not queue:
+            self.current[guild.id] = None
             return
 
-        title, url = queue.pop(0)
+        title, url, requester = queue.pop(0)
+        self.current[guild.id] = (title, url, requester)
         source = discord.FFmpegPCMAudio(url, **FFMPEG_OPTIONS)
 
         def after(error):
@@ -113,11 +116,10 @@ class MusicCog(commands.Cog):
 
     @commands.command(name="play", aliases=["p"])
     async def play(self, ctx: commands.Context, *, query: str):
-        """Play a song from YouTube. Usage: !play <song name or URL>"""
+        """Play a song from YouTube. Usage: ?play <song name or URL>"""
         if not ctx.author.voice:
             return await ctx.send("You need to be in a voice channel.")
 
-        # Auto-join if not connected
         if not ctx.voice_client:
             await ctx.author.voice.channel.connect()
 
@@ -127,15 +129,17 @@ class MusicCog(commands.Cog):
             return await ctx.send("Could not find that track.")
 
         title, url = result
+        requester = ctx.author.display_name
         vc = ctx.voice_client
 
         if vc.is_playing() or vc.is_paused():
-            self._get_queue(ctx.guild.id).append((title, url))
-            await ctx.send(f"Queued: **{title}**")
+            self._get_queue(ctx.guild.id).append((title, url, requester))
+            await ctx.send(f"Queued: **{title}** (requested by {requester})")
         else:
+            self.current[ctx.guild.id] = (title, url, requester)
             source = discord.FFmpegPCMAudio(url, **FFMPEG_OPTIONS)
             vc.play(source, after=lambda e: self._play_next(ctx.guild))
-            await ctx.send(f"Now playing: **{title}**")
+            await ctx.send(f"Now playing: **{title}** (requested by {requester})")
 
     @commands.command(name="skip")
     async def skip(self, ctx: commands.Context):
@@ -153,10 +157,39 @@ class MusicCog(commands.Cog):
         if not q:
             return await ctx.send("The queue is empty.")
 
-        lines = [f"**{i+1}.** {title}" for i, (title, _) in enumerate(q[:10])]
+        lines = [f"**{i+1}.** {title} — *{req}*" for i, (title, _, req) in enumerate(q[:10])]
         if len(q) > 10:
             lines.append(f"...and {len(q) - 10} more")
         await ctx.send("\n".join(lines))
+
+    @commands.command(name="nowplaying", aliases=["np"])
+    async def nowplaying(self, ctx: commands.Context):
+        """Show the currently playing song."""
+        entry = self.current.get(ctx.guild.id)
+        if not entry:
+            return await ctx.send("Nothing is currently playing.")
+        title, _, requester = entry
+        await ctx.send(f"Now playing: **{title}** (requested by {requester})")
+
+    @commands.command(name="shuffle")
+    async def shuffle(self, ctx: commands.Context):
+        """Shuffle the queue."""
+        q = self._get_queue(ctx.guild.id)
+        if len(q) < 2:
+            return await ctx.send("Not enough songs in the queue to shuffle.")
+        random.shuffle(q)
+        await ctx.send("Queue shuffled.")
+
+    @commands.command(name="remove")
+    async def remove(self, ctx: commands.Context, position: int):
+        """Remove a song from the queue by position. Usage: ?remove <number>"""
+        q = self._get_queue(ctx.guild.id)
+        if not q:
+            return await ctx.send("The queue is empty.")
+        if position < 1 or position > len(q):
+            return await ctx.send(f"Invalid position. Queue has {len(q)} song(s).")
+        title, _, _ = q.pop(position - 1)
+        await ctx.send(f"Removed **{title}** from the queue.")
 
     @commands.command(name="pause")
     async def pause(self, ctx: commands.Context):
@@ -180,6 +213,7 @@ class MusicCog(commands.Cog):
     async def stop(self, ctx: commands.Context):
         """Stop playback and clear the queue."""
         self._get_queue(ctx.guild.id).clear()
+        self.current[ctx.guild.id] = None
         if ctx.voice_client:
             ctx.voice_client.stop()
         await ctx.send("Stopped and cleared the queue.")
@@ -204,6 +238,7 @@ class MusicCog(commands.Cog):
             )
 
         self._get_queue(ctx.guild.id).clear()
+        self.current[ctx.guild.id] = None
         await ctx.voice_client.disconnect()
         await ctx.send("Disconnected.")
 
@@ -215,3 +250,8 @@ class MusicCog(commands.Cog):
                 f"Slow down! Try again in {error.retry_after:.0f}s.",
                 delete_after=5,
             )
+
+    @remove.error
+    async def remove_error(self, ctx, error):
+        if isinstance(error, commands.BadArgument):
+            await ctx.send("Usage: `?remove <number>`", delete_after=5)
