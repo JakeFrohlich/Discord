@@ -81,7 +81,8 @@ class ModerationCog(commands.Cog):
                 return
 
         # Link filter — only applies to members with The Wanderer role
-        if self._has_wanderer_role(message.author):
+        # Skip if the message has direct file attachments (uploaded GIFs/images)
+        if self._has_wanderer_role(message.author) and not message.attachments:
             links = LINK_PATTERN.findall(message.content)
             if links:
                 # Check if all links are from allowed domains
